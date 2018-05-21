@@ -1,10 +1,41 @@
 # Submission Process
 - Note: When pinging for status in any step, do not do it constantly, limit it to once every 5 seconds or longer.
 
+## Login Process
+
+### Login to Max
+- Step 1: call `/vi/max_cert_login` (POST) to login to MAX using a certificate **Not yet implemented**
+  - Payload:
+    - `cert_path`: string, absolute path of the MAX certificate file
+    - `service`: string, broker website the user is attempting to access
+  - Response:
+    - `ticket`: string,represents the verification that a user successfully logged into max. The ticket comes from the url the Max login service sends
+    - `service`: string, broker website the user is attempting to access
+
+- Step 2: call `/v1/max_login/` (POST) current broker login endpoint for logging into broker using MAX login
+  - Payload:
+     - `ticket`: string, represents the verification that a user successfully logged into max. The ticket comes from the url the Max login service sends
+     - `service`: string, broker website the user is attempting to access
+  - Response:
+    - `user_id`: int, database identifier of the logged in user, part of response only if login is successful
+    - `name`: string, user's name, part of response only if login is successful
+    - `title`: string, title of user , part of response only if login is successful
+    - `skip_guide`: boolean, indicates whether or not the user has requested to skip introductory materials, part of response only if login is successful
+    - `website_admin`: boolean, describes a super-user status, part of response only if login is successful
+    - `affiliations`: list, indicates which agencies this user is a part of and what permissions they have at that agency, part of response only if login is successful
+        - `agency_name`: string, name of agency user is affiliated with
+        - `permission`: string, permission type for user (reader, writer, submitter, website_admin, fabs)
+    - `message`: string, login error response "You have failed to login successfully with MAX", otherwise says "Login successful"
+    - `errorType`: string, type of error, part of response only if login is unsuccessful
+    - `trace`: list, traceback of error, part of response only if login is unsuccessful
+    - `session-token` (**Not yet implemented**): string, a hash the application uses to verify that user sending the request is logged in, part of response only if login is successful
+
 ## DABS Submission Process
 
 ### Upload A, B, C Files
 - Step 1: call `/v1/submit_files/` (POST) to create the submission
+  - Header:
+     - `X-Session-ID`: string, session token id
   - Payload:
      - `appropriations`: string, file A name
      - `program_activity`: string, file B name
@@ -43,6 +74,8 @@
 ### Validate A, B, C Files
 - File-level validation begins automatically on completion of `finalize_job` call
 - Check status of validations using `/v1/check_status/` (POST)
+  - Header:
+     - `X-Session-ID`: string, session token id
   - Payload:
      - `submission_id`: string, ID of the submission that was created, received from the `submit_files` response
   - Response:
@@ -97,6 +130,8 @@
 ### Generate D1, D2 Files
 - D File generation must be manually started ONLY AFTER all errors in A, B, C files have been fixed (warnings are allowed)
 - Step 1: Call `/v1/generate_file/` (POST) for each of the D files
+  - Header:
+     - `X-Session-ID`: string, session token id
   - Payload:
      - `start`: string, start date for D file (first day of the starting month provided in `submit_files`, MM/DD/YYYY)
      - `end`: string, end date for D file (last day of the ending month provided in `submit_files`, MM/DD/YYYY)
@@ -128,6 +163,8 @@
 - Poll using the `check_status` route in the same manner as described in `Validate A, B, C Files`
 - When checking the job array, find the `job_type` of `validation` to check for completion.
 - To get a specific error/warning file, call `/v1/submission/SUBMISSIONID/report_url/`(POST) where SUBMISSIONID is the ID of the submission
+  - Header:
+     - `X-Session-ID`: string, session token id
   - Payload:
      - `file_type`: string, the base file being compared against
      - `cross_type`: string, the secondary file being compared against
@@ -144,6 +181,8 @@
 ### Generate E, F Files
 - Once cross-file validation completes with 0 errors (warnings are acceptable), E/F file generation can begin.
 - Call `/v1/generate_file/` (POST) to generate E and F files, will require being called twice
+  - Header:
+     - `X-Session-ID`: string, session token id
   - Payload:
      - `start`: string, empty string
      - `end`: string, empty string
@@ -181,6 +220,8 @@
      - `E`: string, comment on file E (Executive Compensation)
      - `F`: string, comment on file F (Sub Award)
 - To get the total obligations throughout the file, call `/v1/get_obligations` (POST)
+  - Header:
+     - `X-Session-ID`: string, session token id
   - Payload:
      - `submission_id`: string, ID of the submission
   - Response:
@@ -208,6 +249,8 @@
 
 ### Upload FABS File
 - Step 1: Call `/v1/upload_detached_file/` (POST) (Note, this is NOT the file upload)
+  - Header:
+     - `X-Session-ID`: string, session token id
   - Payload:
      - `agency_code`: string, sub tier agency code
      - `cgac_code`: null
@@ -232,6 +275,8 @@
 ### Validate FABS File
 - Validations are automatically started by `finalize_job`
 - Check status of validations using `/v1/check_status/` (POST)
+  - Header:
+     - `X-Session-ID`: string, session token id
   - Payload:
      - `submission_id`: string, ID of the submission that was created, received from the `submit_files` response
   - Response:
@@ -273,6 +318,8 @@
           - `rule_failed`: string, label for the rule that failed
 - Continue polling with `check_status` until the job has a `job_status` of `finished` or `invalid` and the `file_status` is not `incomplete`
 - If there are any errors, get the error reports by calling `/v1/submission/SUBMISSIONID/report_url/` (POST) where `SUBMISSIONID` is the ID of the submission
+  - Header:
+     - `X-Session-ID`: string, session token id
   - Payload:
      - `file_type`: string, always "detached_award" for FABS files
      - `warning`: boolean (`true` for warning files, `false` for error files)
